@@ -99,6 +99,8 @@ Tools are `Laravel\Mcp\Server\Tool` classes and return `Laravel\Mcp\Response::js
 | `zoho_crm_get_related_records` | Related list rows |
 | `zoho_crm_composite_requests` | `POST /__composite_requests` (≤5 sub-requests) |
 
+Additional OAuth scopes may be required for some calls (for example Zoho documents `ZohoCRM.composite_requests.CUSTOM` for composite). Adjust `ZOHO_OAUTH_SCOPES` when connecting Zoho.
+
 ## Security
 
 - MCP access tokens are secrets; rotate via expiry or DB deletion.
