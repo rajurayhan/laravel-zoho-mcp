@@ -8,42 +8,45 @@ use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
+use LaravelZohoMcp\Models\ZohoOAuthConnection;
 use Mcp\Exception\ToolCallException;
 
 final class ZohoApiClient
 {
     private ClientInterface $http;
 
-    private string $accountsUrl;
+    private ?ZohoOAuthConnection $connection = null;
 
-    private string $apiBaseUrl;
+    private bool $legacyEnvironmentMode = false;
 
-    private ?string $clientId;
+    private ?string $memoryAccessToken = null;
 
-    private ?string $clientSecret;
-
-    private ?string $refreshToken;
-
-    private ?string $accessToken = null;
-
-    private ?int $accessTokenExpiresAt = null;
+    private ?int $memoryAccessTokenExpiresAt = null;
 
     public function __construct(
         private readonly ConfigRepository $config,
         ?ClientInterface $http = null,
     ) {
         $this->http = $http ?? new Client(['timeout' => 120]);
-        $cfg = $config->get('zoho-mcp', []);
-        $this->accountsUrl = rtrim((string) ($cfg['accounts_url'] ?? 'https://accounts.zoho.com'), '/');
-        $this->apiBaseUrl = rtrim((string) ($cfg['api_base_url'] ?? 'https://www.zohoapis.com'), '/');
-        $this->clientId = isset($cfg['client_id']) ? (string) $cfg['client_id'] : null;
-        $this->clientSecret = isset($cfg['client_secret']) ? (string) $cfg['client_secret'] : null;
-        $this->refreshToken = isset($cfg['refresh_token']) ? (string) $cfg['refresh_token'] : null;
+    }
+
+    public function useConnection(ZohoOAuthConnection $connection): void
+    {
+        $this->connection = $connection;
+        $this->legacyEnvironmentMode = false;
+        $this->memoryAccessToken = null;
+        $this->memoryAccessTokenExpiresAt = null;
+    }
+
+    public function useLegacyEnvironmentCredentials(): void
+    {
+        $this->connection = null;
+        $this->legacyEnvironmentMode = true;
+        $this->memoryAccessToken = null;
+        $this->memoryAccessTokenExpiresAt = null;
     }
 
     /**
-     * Perform an HTTP request against the configured Zoho API base URL.
-     *
      * @param  array<string, mixed>  $query
      * @param  array<string, mixed>|null  $jsonBody
      * @return array<string, mixed>
@@ -51,7 +54,7 @@ final class ZohoApiClient
     public function request(string $method, string $path, array $query = [], ?array $jsonBody = null, bool $retryOnUnauthorized = true): array
     {
         $this->assertCredentialsConfigured();
-        $uri = $this->apiBaseUrl.'/'.ltrim($path, '/');
+        $uri = $this->apiBaseUrl().'/'.ltrim($path, '/');
         $options = [
             'headers' => [
                 'Authorization' => 'Zoho-oauthtoken '.$this->getAccessToken(),
@@ -76,8 +79,8 @@ final class ZohoApiClient
         $decoded = $body !== '' ? json_decode($body, true) : null;
 
         if ($status === 401 && $retryOnUnauthorized) {
-            $this->accessToken = null;
-            $this->accessTokenExpiresAt = null;
+            $this->memoryAccessToken = null;
+            $this->memoryAccessTokenExpiresAt = null;
 
             return $this->request($method, $path, $query, $jsonBody, false);
         }
@@ -100,43 +103,91 @@ final class ZohoApiClient
         return trim($prefix, '/');
     }
 
+    private function apiBaseUrl(): string
+    {
+        if ($this->connection !== null) {
+            return rtrim($this->connection->api_base_url, '/');
+        }
+
+        return rtrim((string) $this->config->get('zoho-mcp.api_base_url', 'https://www.zohoapis.com'), '/');
+    }
+
+    private function accountsUrl(): string
+    {
+        if ($this->connection !== null) {
+            return rtrim($this->connection->accounts_url, '/');
+        }
+
+        return rtrim((string) $this->config->get('zoho-mcp.accounts_url', 'https://accounts.zoho.com'), '/');
+    }
+
     private function assertCredentialsConfigured(): void
     {
-        if ($this->clientId === null || $this->clientId === '') {
-            throw new ToolCallException('Missing Zoho OAuth client id. Set ZOHO_CLIENT_ID in your environment.');
+        $clientId = (string) $this->config->get('zoho-mcp.client_id', '');
+        $clientSecret = (string) $this->config->get('zoho-mcp.client_secret', '');
+        if ($clientId === '' || $clientSecret === '') {
+            throw new ToolCallException('Missing Zoho OAuth application credentials. Set ZOHO_CLIENT_ID and ZOHO_CLIENT_SECRET.');
         }
-        if ($this->clientSecret === null || $this->clientSecret === '') {
-            throw new ToolCallException('Missing Zoho OAuth client secret. Set ZOHO_CLIENT_SECRET in your environment.');
+
+        if ($this->connection !== null) {
+            if ($this->connection->refresh_token === null || $this->connection->refresh_token === '') {
+                throw new ToolCallException('Linked Zoho account is missing a refresh token. Reconnect via the web OAuth flow.');
+            }
+
+            return;
         }
-        if ($this->refreshToken === null || $this->refreshToken === '') {
-            throw new ToolCallException('Missing Zoho refresh token. Set ZOHO_REFRESH_TOKEN in your environment.');
+
+        if ($this->legacyEnvironmentMode) {
+            $refresh = (string) $this->config->get('zoho-mcp.refresh_token', '');
+            if ($refresh === '') {
+                throw new ToolCallException('Missing Zoho refresh token. Set ZOHO_REFRESH_TOKEN for legacy mode.');
+            }
+
+            return;
         }
+
+        throw new ToolCallException('Zoho API client is not configured. Use zoho:mcp with ZOHO_MCP_ACCESS_TOKEN or legacy env credentials.');
     }
 
     private function getAccessToken(): string
     {
+        if ($this->connection !== null) {
+            $expires = $this->connection->access_token_expires_at;
+            if (
+                $this->connection->access_token !== null
+                && $this->connection->access_token !== ''
+                && $expires !== null
+                && $expires->isFuture()
+                && $expires->greaterThan(now()->addMinute())
+            ) {
+                return (string) $this->connection->access_token;
+            }
+        }
+
         $now = time();
-        if ($this->accessToken !== null && ($this->accessTokenExpiresAt === null || $now < $this->accessTokenExpiresAt - 60)) {
-            return $this->accessToken;
+        if ($this->memoryAccessToken !== null && ($this->memoryAccessTokenExpiresAt === null || $now < $this->memoryAccessTokenExpiresAt - 60)) {
+            return (string) $this->memoryAccessToken;
         }
 
         $this->refreshAccessToken();
 
-        return (string) $this->accessToken;
+        return (string) $this->memoryAccessToken;
     }
 
     private function refreshAccessToken(): void
     {
         $this->assertCredentialsConfigured();
-        $tokenUri = $this->accountsUrl.'/oauth/v2/token';
+        $tokenUri = $this->accountsUrl().'/oauth/v2/token';
+        $form = [
+            'client_id' => (string) $this->config->get('zoho-mcp.client_id'),
+            'client_secret' => (string) $this->config->get('zoho-mcp.client_secret'),
+            'grant_type' => 'refresh_token',
+            'refresh_token' => $this->refreshToken(),
+        ];
+
         try {
             $response = $this->http->request('POST', $tokenUri, [
-                'form_params' => [
-                    'refresh_token' => $this->refreshToken,
-                    'client_id' => $this->clientId,
-                    'client_secret' => $this->clientSecret,
-                    'grant_type' => 'refresh_token',
-                ],
+                'form_params' => $form,
             ]);
         } catch (GuzzleException $e) {
             throw new ToolCallException('Zoho token refresh failed: '.$e->getMessage(), 0, $e);
@@ -153,9 +204,37 @@ final class ZohoApiClient
             throw new ToolCallException('Zoho token refresh rejected ('.$msg.$hint.').');
         }
 
-        $this->accessToken = $payload['access_token'];
+        $this->memoryAccessToken = $payload['access_token'];
         $expiresIn = isset($payload['expires_in']) && is_numeric($payload['expires_in']) ? (int) $payload['expires_in'] : 3600;
-        $this->accessTokenExpiresAt = time() + max(60, $expiresIn);
+        $this->memoryAccessTokenExpiresAt = time() + max(60, $expiresIn);
+
+        if ($this->connection !== null) {
+            $this->connection->access_token = $payload['access_token'];
+            $this->connection->access_token_expires_at = now()->addSeconds(max(60, $expiresIn));
+            if (isset($payload['api_domain']) && is_string($payload['api_domain']) && $payload['api_domain'] !== '') {
+                $this->connection->api_base_url = $this->normalizeApiBaseUrlFromToken($payload['api_domain']);
+            }
+            $this->connection->save();
+        }
+    }
+
+    private function refreshToken(): string
+    {
+        if ($this->connection !== null) {
+            return (string) $this->connection->refresh_token;
+        }
+
+        return (string) $this->config->get('zoho-mcp.refresh_token', '');
+    }
+
+    private function normalizeApiBaseUrlFromToken(string $apiDomain): string
+    {
+        $apiDomain = trim($apiDomain);
+        if (str_starts_with($apiDomain, 'http://') || str_starts_with($apiDomain, 'https://')) {
+            return rtrim($apiDomain, '/');
+        }
+
+        return 'https://'.rtrim($apiDomain, '/');
     }
 
     /**
