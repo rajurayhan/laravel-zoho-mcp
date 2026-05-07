@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace LaravelZohoMcp\Mcp;
 
 use LaravelZohoMcp\Zoho\ZohoApiClient;
-use Mcp\Exception\ToolCallException;
+use LaravelZohoMcp\Exceptions\UserFacingZohoException;
 
 /**
  * MCP tool handlers for Zoho REST APIs. Resolved from the Laravel container
@@ -33,7 +33,7 @@ final class ZohoMcpTools
         $allowed = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
         $m = strtoupper(trim($method));
         if (! in_array($m, $allowed, true)) {
-            throw new ToolCallException('method must be one of: '.implode(', ', $allowed));
+            throw new UserFacingZohoException('method must be one of: '.implode(', ', $allowed));
         }
 
         return $this->zoho->request($m, $path, $query ?? [], $body);
@@ -105,7 +105,7 @@ final class ZohoMcpTools
     public function zoho_crm_create_records(string $module_api_name, array $records): array
     {
         if ($records === []) {
-            throw new ToolCallException('records must contain at least one object.');
+            throw new UserFacingZohoException('records must contain at least one object.');
         }
         $p = $this->zoho->crmPrefix();
 
@@ -121,7 +121,7 @@ final class ZohoMcpTools
     public function zoho_crm_update_records(string $module_api_name, array $records): array
     {
         if ($records === []) {
-            throw new ToolCallException('records must contain at least one object with an id field.');
+            throw new UserFacingZohoException('records must contain at least one object with an id field.');
         }
         $p = $this->zoho->crmPrefix();
 
@@ -137,11 +137,11 @@ final class ZohoMcpTools
     public function zoho_crm_delete_records(string $module_api_name, array $record_ids): array
     {
         if ($record_ids === []) {
-            throw new ToolCallException('record_ids must contain at least one id.');
+            throw new UserFacingZohoException('record_ids must contain at least one id.');
         }
         $ids = implode(',', array_map(static fn (string $id): string => trim($id), $record_ids));
         if ($ids === '') {
-            throw new ToolCallException('record_ids must be non-empty strings.');
+            throw new UserFacingZohoException('record_ids must be non-empty strings.');
         }
         $p = $this->zoho->crmPrefix();
 
@@ -157,7 +157,7 @@ final class ZohoMcpTools
     {
         $q = trim($select_query);
         if ($q === '') {
-            throw new ToolCallException('select_query must be a non-empty COQL string.');
+            throw new UserFacingZohoException('select_query must be a non-empty COQL string.');
         }
         $p = $this->zoho->crmPrefix();
 
@@ -177,7 +177,7 @@ final class ZohoMcpTools
     ): array {
         $crit = trim($criteria);
         if ($crit === '') {
-            throw new ToolCallException('criteria must be a non-empty Zoho criteria expression.');
+            throw new UserFacingZohoException('criteria must be a non-empty Zoho criteria expression.');
         }
         $query = ['criteria' => $crit];
         if ($page !== null) {
@@ -195,7 +195,7 @@ final class ZohoMcpTools
     {
         $m = trim($module_api_name);
         if ($m === '' || ! preg_match('/^[A-Za-z][A-Za-z0-9_]*$/', $m)) {
-            throw new ToolCallException('module_api_name must be a non-empty Zoho API module identifier.');
+            throw new UserFacingZohoException('module_api_name must be a non-empty Zoho API module identifier.');
         }
 
         return $m;

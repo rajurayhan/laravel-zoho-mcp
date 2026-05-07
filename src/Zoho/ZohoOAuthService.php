@@ -10,7 +10,7 @@ use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Illuminate\Support\Facades\Route;
 use LaravelZohoMcp\Models\ZohoOAuthConnection;
-use Mcp\Exception\ToolCallException;
+use LaravelZohoMcp\Exceptions\UserFacingZohoException;
 
 final class ZohoOAuthService
 {
@@ -63,7 +63,7 @@ final class ZohoOAuthService
         $clientId = (string) $this->config->get('zoho-mcp.client_id', '');
         $clientSecret = (string) $this->config->get('zoho-mcp.client_secret', '');
         if ($clientId === '' || $clientSecret === '') {
-            throw new ToolCallException('Zoho OAuth client id or secret is not configured.');
+            throw new UserFacingZohoException('Zoho OAuth client id or secret is not configured.');
         }
 
         $redirectUri = $this->callbackAbsoluteUrl();
@@ -79,19 +79,19 @@ final class ZohoOAuthService
                 ],
             ]);
         } catch (GuzzleException $e) {
-            throw new ToolCallException('Zoho authorization code exchange failed: '.$e->getMessage(), 0, $e);
+            throw new UserFacingZohoException('Zoho authorization code exchange failed: '.$e->getMessage(), 0, $e);
         }
 
         $payload = json_decode((string) $response->getBody(), true);
         if (! is_array($payload)) {
-            throw new ToolCallException('Zoho token endpoint returned invalid JSON.');
+            throw new UserFacingZohoException('Zoho token endpoint returned invalid JSON.');
         }
 
         if (! isset($payload['access_token']) || ! is_string($payload['access_token'])) {
             $msg = isset($payload['error']) ? (string) $payload['error'] : 'unknown_error';
             $hint = isset($payload['error_description']) ? ': '.(string) $payload['error_description'] : '';
 
-            throw new ToolCallException('Zoho rejected the authorization code ('.$msg.$hint.').');
+            throw new UserFacingZohoException('Zoho rejected the authorization code ('.$msg.$hint.').');
         }
 
         return $payload;
@@ -113,7 +113,7 @@ final class ZohoOAuthService
             : null;
 
         if ($refresh === null && $existing === null) {
-            throw new ToolCallException('Zoho did not return a refresh token. Try again with prompt=consent enabled, or revoke the app in Zoho and reconnect.');
+            throw new UserFacingZohoException('Zoho did not return a refresh token. Try again with prompt=consent enabled, or revoke the app in Zoho and reconnect.');
         }
 
         $attributes = [
@@ -140,7 +140,7 @@ final class ZohoOAuthService
         }
 
         if ($refresh === null) {
-            throw new ToolCallException('Missing refresh token for new Zoho connection.');
+            throw new UserFacingZohoException('Missing refresh token for new Zoho connection.');
         }
 
         $attributes['refresh_token'] = $refresh;

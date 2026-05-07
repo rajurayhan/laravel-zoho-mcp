@@ -1,6 +1,6 @@
 {
     "name": "laravel-zoho/mcp-server",
-    "description": "Laravel package that runs a Model Context Protocol (MCP) server exposing Zoho REST API operations as MCP tools.",
+    "description": "Laravel package that runs a Model Context Protocol (MCP) server exposing Zoho REST API operations as MCP tools (via Laravel MCP).",
     "type": "library",
     "license": "MIT",
     "keywords": [
@@ -12,20 +12,20 @@
         "oauth"
     ],
     "require": {
-        "php": "^8.2",
+        "php": "^8.3",
         "guzzlehttp/guzzle": "^7.8",
-        "illuminate/auth": "^11.0|^12.0",
-        "illuminate/console": "^11.0|^12.0",
-        "illuminate/contracts": "^11.0|^12.0",
-        "illuminate/database": "^11.0|^12.0",
-        "illuminate/http": "^11.0|^12.0",
-        "illuminate/routing": "^11.0|^12.0",
-        "illuminate/support": "^11.0|^12.0",
-        "mcp/sdk": "^0.5"
+        "illuminate/auth": "^13.0",
+        "illuminate/console": "^13.0",
+        "illuminate/contracts": "^13.0",
+        "illuminate/database": "^13.0",
+        "illuminate/http": "^13.0",
+        "illuminate/routing": "^13.0",
+        "illuminate/support": "^13.0",
+        "laravel/mcp": "^0.7"
     },
     "require-dev": {
-        "orchestra/testbench": "^9.0|^10.0",
-        "phpunit/phpunit": "^11.0"
+        "orchestra/testbench": "^11.0",
+        "phpunit/phpunit": "^11.5.50|^12.0"
     },
     "autoload": {
         "psr-4": {
