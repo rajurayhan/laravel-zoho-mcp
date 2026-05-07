@@ -46,6 +46,6 @@ abstract class TestCase extends OrchestraTestCase
         $app['config']->set('zoho-mcp.client_id', 'test_zoho_client_id');
         $app['config']->set('zoho-mcp.client_secret', 'test_zoho_client_secret');
         $app['config']->set('zoho-mcp.oauth.callback_url', 'https://zoho-mcp.test/zoho-mcp/oauth/callback');
-        $app['config']->set('zoho-mcp.oauth.scopes', 'ZohoCRM.modules.READ');
+        $app['config']->set('zoho-mcp.oauth.scopes', 'ZohoCRM.modules.READ,ZohoCRM.users.READ,ZohoCRM.settings.READ,ZohoCRM.org.READ');
     }
 }

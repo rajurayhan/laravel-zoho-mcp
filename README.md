@@ -68,21 +68,36 @@ Legacy single-tenant mode still works when `ZOHO_REFRESH_TOKEN` and client crede
 
 You may use `zoho:mcp` instead of `mcp:start zoho` if you prefer the wrapper command.
 
-## MCP tools
+## MCP tools (Zoho CRM v8)
 
-Tools are implemented as `Laravel\Mcp\Server\Tool` classes and return `Laravel\Mcp\Response::json()` (or `Response::error()` for recoverable issues).
+Tools are `Laravel\Mcp\Server\Tool` classes and return `Laravel\Mcp\Response::json()` (or `Response::error()` for recoverable issues). They map closely to [Zoho CRM V8 APIs](https://www.zoho.com/crm/developer/docs/api/v8/). Grant matching OAuth scopes (defaults in `config/zoho-mcp.php` include modules, users, settings, and org read).
 
-| Tool | Description |
-|------|-------------|
-| `zoho_api_request` | Generic `GET` / `POST` / `PUT` / `PATCH` / `DELETE` under the active API base URL. |
-| `zoho_crm_list_modules` | CRM settings/modules |
-| `zoho_crm_get_records` | Paginated list |
+| Tool | Zoho CRM v8 area |
+|------|-------------------|
+| `zoho_api_request` | Escape hatch: any REST method/path under your API base (other products or undocumented endpoints). |
+| `zoho_crm_get_organization` | `GET /org` |
+| `zoho_crm_list_modules` | `GET /settings/modules` |
+| `zoho_crm_get_module_metadata` | `GET /settings/modules/{module}` |
+| `zoho_crm_get_fields` | `GET /settings/fields?module=` |
+| `zoho_crm_get_layouts` | `GET /settings/layouts?module=` |
+| `zoho_crm_get_related_lists_metadata` | `GET /settings/related_lists?module=` |
+| `zoho_crm_list_users` | `GET /users` |
+| `zoho_crm_get_user` | `GET /users/{id}` |
+| `zoho_crm_list_roles` | `GET /settings/roles` |
+| `zoho_crm_get_role` | `GET /settings/roles/{id}` |
+| `zoho_crm_list_profiles` | `GET /settings/profiles` |
+| `zoho_crm_get_profile` | `GET /settings/profiles/{id}` |
+| `zoho_crm_list_territories` | `GET /settings/territories` |
+| `zoho_crm_get_territory` | `GET /settings/territories/{id}` |
+| `zoho_crm_get_records` | Module list |
 | `zoho_crm_get_record` | Single record |
-| `zoho_crm_create_records` | Create rows (`data` array) |
-| `zoho_crm_update_records` | Update rows (include `id`) |
-| `zoho_crm_delete_records` | Delete by ids |
-| `zoho_crm_coql_query` | Read-only COQL |
-| `zoho_crm_search_records` | Criteria-based search |
+| `zoho_crm_create_records` | `POST` create |
+| `zoho_crm_update_records` | `PUT` update |
+| `zoho_crm_delete_records` | `DELETE` by ids |
+| `zoho_crm_coql_query` | COQL |
+| `zoho_crm_search_records` | Criteria search |
+| `zoho_crm_get_related_records` | Related list rows |
+| `zoho_crm_composite_requests` | `POST /__composite_requests` (≤5 sub-requests) |
 
 ## Security
 

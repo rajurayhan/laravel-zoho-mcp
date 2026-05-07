@@ -41,8 +41,7 @@ return [
     'mcp_local_handle' => env('ZOHO_MCP_LOCAL_HANDLE', 'zoho'),
 
     'instructions' => env('ZOHO_MCP_INSTRUCTIONS', <<<'TXT'
-This server exposes Zoho REST APIs through MCP tools. Each MCP session is tied to one Laravel user via ZOHO_MCP_ACCESS_TOKEN.
-Prefer CRM-specific tools when working with Zoho CRM. Use zoho_api_request only for endpoints without a dedicated tool.
+This server exposes Zoho CRM v8 REST APIs through dedicated MCP tools (org, module metadata, fields, layouts, related lists, users, roles, profiles, territories, records, COQL, search, related records, composite). Prefer these over zoho_api_request when a tool exists. zoho_api_request is for other Zoho REST paths (other products or new CRM endpoints). Ensure your OAuth scopes cover the operations you call (see Zoho CRM API documentation).
 TXT
     ),
 
@@ -79,7 +78,7 @@ TXT
         | Comma-separated Zoho scopes (Zoho expects commas in the authorize URL).
         */
 
-        'scopes' => env('ZOHO_OAUTH_SCOPES', 'ZohoCRM.modules.ALL,ZohoCRM.users.ALL,ZohoCRM.settings.ALL'),
+        'scopes' => env('ZOHO_OAUTH_SCOPES', 'ZohoCRM.modules.ALL,ZohoCRM.users.ALL,ZohoCRM.settings.ALL,ZohoCRM.org.READ'),
 
         'user_model' => env('ZOHO_MCP_USER_MODEL'),
 
