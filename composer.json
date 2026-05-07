@@ -1,0 +1,51 @@
+{
+    "name": "laravel-zoho/mcp-server",
+    "description": "Laravel package that runs a Model Context Protocol (MCP) server exposing Zoho REST API operations as MCP tools.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "laravel",
+        "mcp",
+        "model-context-protocol",
+        "zoho",
+        "zoho-crm",
+        "oauth"
+    ],
+    "require": {
+        "php": "^8.2",
+        "guzzlehttp/guzzle": "^7.8",
+        "illuminate/console": "^11.0|^12.0",
+        "illuminate/contracts": "^11.0|^12.0",
+        "illuminate/support": "^11.0|^12.0",
+        "mcp/sdk": "^0.5"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0|^10.0",
+        "phpunit/phpunit": "^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "LaravelZohoMcp\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "LaravelZohoMcp\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "LaravelZohoMcp\\ZohoMcpServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
