@@ -9,7 +9,7 @@ use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use LaravelZohoMcp\Models\ZohoOAuthConnection;
-use Mcp\Exception\ToolCallException;
+use LaravelZohoMcp\Exceptions\UserFacingZohoException;
 
 final class ZohoApiClient
 {
@@ -71,7 +71,7 @@ final class ZohoApiClient
         try {
             $response = $this->http->request(strtoupper($method), $uri, $options);
         } catch (GuzzleException $e) {
-            throw new ToolCallException('Zoho HTTP request failed: '.$e->getMessage(), 0, $e);
+            throw new UserFacingZohoException('Zoho HTTP request failed: '.$e->getMessage(), 0, $e);
         }
 
         $status = $response->getStatusCode();
@@ -86,11 +86,11 @@ final class ZohoApiClient
         }
 
         if (! is_array($decoded)) {
-            throw new ToolCallException('Zoho returned a non-JSON response (HTTP '.$status.'): '.mb_substr($body, 0, 500));
+            throw new UserFacingZohoException('Zoho returned a non-JSON response (HTTP '.$status.'): '.mb_substr($body, 0, 500));
         }
 
         if ($status >= 400) {
-            throw new ToolCallException($this->formatZohoError($decoded, $status));
+            throw new UserFacingZohoException($this->formatZohoError($decoded, $status));
         }
 
         return $decoded;
@@ -126,12 +126,12 @@ final class ZohoApiClient
         $clientId = (string) $this->config->get('zoho-mcp.client_id', '');
         $clientSecret = (string) $this->config->get('zoho-mcp.client_secret', '');
         if ($clientId === '' || $clientSecret === '') {
-            throw new ToolCallException('Missing Zoho OAuth application credentials. Set ZOHO_CLIENT_ID and ZOHO_CLIENT_SECRET.');
+            throw new UserFacingZohoException('Missing Zoho OAuth application credentials. Set ZOHO_CLIENT_ID and ZOHO_CLIENT_SECRET.');
         }
 
         if ($this->connection !== null) {
             if ($this->connection->refresh_token === null || $this->connection->refresh_token === '') {
-                throw new ToolCallException('Linked Zoho account is missing a refresh token. Reconnect via the web OAuth flow.');
+                throw new UserFacingZohoException('Linked Zoho account is missing a refresh token. Reconnect via the web OAuth flow.');
             }
 
             return;
@@ -140,13 +140,13 @@ final class ZohoApiClient
         if ($this->legacyEnvironmentMode) {
             $refresh = (string) $this->config->get('zoho-mcp.refresh_token', '');
             if ($refresh === '') {
-                throw new ToolCallException('Missing Zoho refresh token. Set ZOHO_REFRESH_TOKEN for legacy mode.');
+                throw new UserFacingZohoException('Missing Zoho refresh token. Set ZOHO_REFRESH_TOKEN for legacy mode.');
             }
 
             return;
         }
 
-        throw new ToolCallException('Zoho API client is not configured. Use zoho:mcp with ZOHO_MCP_ACCESS_TOKEN or legacy env credentials.');
+        throw new UserFacingZohoException('Zoho API client is not configured. Use zoho:mcp with ZOHO_MCP_ACCESS_TOKEN or legacy env credentials.');
     }
 
     private function getAccessToken(): string
@@ -190,18 +190,18 @@ final class ZohoApiClient
                 'form_params' => $form,
             ]);
         } catch (GuzzleException $e) {
-            throw new ToolCallException('Zoho token refresh failed: '.$e->getMessage(), 0, $e);
+            throw new UserFacingZohoException('Zoho token refresh failed: '.$e->getMessage(), 0, $e);
         }
 
         $payload = json_decode((string) $response->getBody(), true);
         if (! is_array($payload)) {
-            throw new ToolCallException('Zoho token endpoint returned invalid JSON.');
+            throw new UserFacingZohoException('Zoho token endpoint returned invalid JSON.');
         }
         if (! isset($payload['access_token']) || ! is_string($payload['access_token'])) {
             $msg = isset($payload['error']) ? (string) $payload['error'] : 'unknown_error';
             $hint = isset($payload['error_description']) ? ': '.(string) $payload['error_description'] : '';
 
-            throw new ToolCallException('Zoho token refresh rejected ('.$msg.$hint.').');
+            throw new UserFacingZohoException('Zoho token refresh rejected ('.$msg.$hint.').');
         }
 
         $this->memoryAccessToken = $payload['access_token'];

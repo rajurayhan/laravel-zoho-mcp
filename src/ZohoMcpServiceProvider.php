@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace LaravelZohoMcp;
 
 use Illuminate\Support\ServiceProvider;
+use Laravel\Mcp\Facades\Mcp;
 use LaravelZohoMcp\Console\ZohoMcpCommand;
+use LaravelZohoMcp\Mcp\ZohoMcpServer;
 use LaravelZohoMcp\Mcp\ZohoMcpTools;
 use LaravelZohoMcp\Zoho\ZohoApiClient;
 use LaravelZohoMcp\Zoho\ZohoOAuthService;
@@ -35,6 +37,10 @@ final class ZohoMcpServiceProvider extends ServiceProvider
 
         if ((bool) config('zoho-mcp.oauth.register_routes', true)) {
             $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
+        }
+
+        if (class_exists(Mcp::class)) {
+            Mcp::local((string) config('zoho-mcp.mcp_local_handle', 'zoho'), ZohoMcpServer::class);
         }
 
         if ($this->app->runningInConsole()) {

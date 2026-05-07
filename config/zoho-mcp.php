@@ -28,6 +28,18 @@ return [
 
     'server_version' => env('ZOHO_MCP_SERVER_VERSION', '1.0.0'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Laravel MCP local server handle
+    |--------------------------------------------------------------------------
+    |
+    | Registered with Laravel\Mcp\Facades\Mcp::local(). Use:
+    | php artisan mcp:start {handle}
+    |
+    */
+
+    'mcp_local_handle' => env('ZOHO_MCP_LOCAL_HANDLE', 'zoho'),
+
     'instructions' => env('ZOHO_MCP_INSTRUCTIONS', <<<'TXT'
 This server exposes Zoho REST APIs through MCP tools. Each MCP session is tied to one Laravel user via ZOHO_MCP_ACCESS_TOKEN.
 Prefer CRM-specific tools when working with Zoho CRM. Use zoho_api_request only for endpoints without a dedicated tool.

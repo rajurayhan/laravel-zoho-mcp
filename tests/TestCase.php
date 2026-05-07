@@ -15,7 +15,10 @@ abstract class TestCase extends OrchestraTestCase
 
     protected function getPackageProviders($app): array
     {
-        return [ZohoMcpServiceProvider::class];
+        return [
+            \Laravel\Mcp\Server\McpServiceProvider::class,
+            ZohoMcpServiceProvider::class,
+        ];
     }
 
     protected function defineDatabaseMigrations(): void

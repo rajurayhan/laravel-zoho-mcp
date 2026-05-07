@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace LaravelZohoMcp\Tests;
 
 use Illuminate\Support\Facades\Artisan;
+use Laravel\Mcp\Facades\Mcp;
 use LaravelZohoMcp\Console\ZohoMcpCommand;
 use LaravelZohoMcp\Mcp\ZohoMcpTools;
 use LaravelZohoMcp\Zoho\ZohoApiClient;
@@ -20,5 +21,15 @@ final class ZohoMcpServiceProviderTest extends TestCase
     {
         $this->assertInstanceOf(ZohoApiClient::class, $this->app->make(ZohoApiClient::class));
         $this->assertInstanceOf(ZohoMcpTools::class, $this->app->make(ZohoMcpTools::class));
+    }
+
+    public function test_registers_laravel_mcp_local_server(): void
+    {
+        $this->assertNotNull(Mcp::getLocalServer('zoho'));
+    }
+
+    public function test_registers_mcp_start_command(): void
+    {
+        $this->assertArrayHasKey('mcp:start', Artisan::all());
     }
 }
